@@ -17,4 +17,36 @@
 .idea/
 *.swp
 *.swo
-*~
+*~# Git
+.git
+.gitattributes
+.github/
+
+# Documentation
+*.md
+!README.md
+
+# Build
+target/
+build/
+dist/
+AppDir/
+.pi/
+
+# Python
+*.pyc
+__pycache__/
+.pytest_cache__
+
+# IDE
+.vscode
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Docker (project-specific)
+# Don't include build artifacts in Docker context
+.dockerignore
+# But keep Dockerfile for reference
