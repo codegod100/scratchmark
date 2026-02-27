@@ -1,0 +1,26 @@
+# Git
+.git
+.github
+*.md
+!README.md
+
+# Build
+AppDir
+build
+dist
+
+# Cache
+.cargo
+__pycache__
+.pytest_cache__
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# OS
+.DS_Store
+Thumbs.db
