@@ -1,5 +1,4 @@
 [![CI Status Badge](https://github.com/sevonj/scratchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/sevonj/scratchmark/actions/workflows/ci.yml)
-[![Translation Status Badge](https://translate.codeberg.org/widget/scratchmark/app/svg-badge.svg)](https://translate.codeberg.org/projects/scratchmark/app)
 
 <div align="center">
 
@@ -19,7 +18,7 @@ https://scratchmark.org
 
 ![screenshot](data/screenshots/screenshot_c_dark.png)
 
-![cat](https://github.com/user-attachments/assets/aaa7b417-5e2f-4a87-ad9b-aa29591d6bcd)
+![cat](https://github.com/user/attachments/assets/aaa7b4175e2f-4a87-add9b-aa29591d6bcd)
 
 ## Get Scratchmark
 
@@ -62,34 +61,15 @@ Scratchmark is licensed GPL-3.0-or-later. Some parts may _additionally_ be avail
 
 ### Building
 
-The project is transitioning to Meson build system, but it remains possible to build and run it with Cargo.
-
-### Cargo
-
-When running from the repository, there's an additional step to the usual `cargo run` command. You need to set an env var to tell the app where to find it:
-
-```sh
-export GSETTINGS_SCHEMA_DIR=$PWD/data
-```
-
-The app needs its settings schema, and the lookup path seemingly can't be set in the code itself.
-
-### Continuous Integration
-
-Pull requests are gatekept by [this workflow.](https://github.com/sevonj/scratchmark/blob/master/.github/workflows/rust.yml) It will check if the code
-
-- builds (you don't say)
-- passes unit tests (run `cargo test`)
-- has linter warnings (run `cargo clippy`)
-- is formatted (run `cargo fmt`)
+The project uses a standard build system (Meson + Cargo).
 
 ### Dependencies
 
 Ubuntu
 
-```
+\`\`\`bash
 libgtk-4-dev build-essential libglib2.0-dev libadwaita-1-dev libgtksourceview-5-dev
-```
+\`\`\`
 
 ### Flatpak
 
@@ -97,62 +77,119 @@ Generating a Flatpak
 
 #### Dependencies
 
-You need Flatpak w/ Flathub and the following packages:
+You need Flatpak with Flathub and following packages:
 
-```
+\`\`\`bash
 org.gnome.Sdk//49
-```
+\`\`\`
 
 #### Building
 
 Build & install:
 
-```sh
+\`\`\`bash
 cd build-aux
 sh generate_flatpak.sh && flatpak install Scratchmark.flatpak --user -y
-```
+\`\`\`
 
 ### AppImage
 
-Build an AppImage using Nix (requires Nix with flakes enabled):
+Build Scratchmark AppImage using Docker:
 
-```sh
-# Build AppImage
-nix build .#appimage
+\`\`\`bash
+# Build Docker image
+docker build -t scratchmark-build .
 
-# Or use the helper script
-./scripts/build-appimage.sh
+# Build AppImage in Docker
+docker run --rm -v \$(pwd):/output scratchmark-build
 
-# Find the AppImage in dist/
-./dist/Scratchmark-*.AppImage
-```
+# Get AppImage from Docker output
+docker cp scratchmark-build:/output/Scratchmark-*.AppImage .
 
-See [NIX_SETUP.md](NIX_SETUP.md) for complete documentation on Nix builds, AppImage distribution, and Cachix integration.
+# Or use Docker Compose
+# See DOCKER_BUILD.md for detailed instructions
+\`\`\`
+
+**Dependencies:**
+- docker
+
+**System Requirements (same for all Linux):**
+- gtk4
+- libadwaita-1
+- gtksourceview-5
 
 **Note:** The AppImage does not bundle GTK4 or libadwaita. Users need these libraries installed on their system.
 
-System requirements:
-- `gtk4`
-- `libadwaita-1`
-- `gtksourceview-5`
-
 On Ubuntu/Debian:
-```bash
+\`\`\`bash
 sudo apt install libgtk-4-1 libadwaita-1-0 libgtksourceview-5-0
-```
+\`\`\`
 
 On Fedora:
-```bash
+\`\`\`bash
 sudo dnf install gtk4 libadwaita gtksourceview5
-```
+\`\`\`
 
 On Arch Linux:
-```bash
+\`\`\`bash
 sudo pacman -S gtk4 libadwaita gtksourceview5
-```
+\`\`\`
 
+**Documentation:** See [DOCKER_BUILD.md](DOCKER_BUILD.md) for detailed Docker build instructions, including:
+- Complete build process
+- Environment setup
+- Troubleshooting common issues
+- How to extract and test AppImage
+
+**Advantages of Docker Build:**
+- **No special setup required** - Works with any Linux distribution
+- **Full network access** - No sandbox restrictions during build
+- **Standard ELF paths** - Binary uses `/lib64/ld-linux-x86-64.so.2` interpreter
+- **Reproducible** - Same Docker image produces identical AppImages
+- **Cross-platform** - Can build on any system with Docker installed
+
+**Quick Start:**
+\`\`\`bash
+# 1. Build and get AppImage (all in one command)
+docker build -t scratchmark-build . && \
+docker run --rm -v \$(pwd):/output scratchmark-build && \
+docker cp scratchmark-build:/output/Scratchmark-*.AppImage .
+
+# 2. Test it
+chmod +x Scratchmark-*.AppImage
+./Scratchmark-*.AppImage
+\`\`\`
+
+**AppImage Structure:**
+The Docker-built AppImage contains:
+- \`\`\`scratchmark\`\` binary
+- GTK4 resources (icons, UI templates)
+- GSettings schema
+- Desktop entry
+- \`\`\`.desktop\`\` and \`\`DirIcon\`\` for AppImage
+- \`\`\`AppRun\`\` wrapper script
+
+**SHA256 Checksum:**
+See [DOCKER_BUILD.md](DOCKER_BUILD.md) for the checksum of your specific build.
+
+---
+
+**Release Process:**
 AppImages are automatically built and released to GitHub when you push a version tag:
-```bash
+
+\`\`\`bash
 git tag v1.8.0
 git push origin v1.8.0
-```
+\`\`\`
+
+The AppImage will be available at:
+\`\`\`
+https://github.com/sevonj/scratchmark/releases/download/v1.8.0/Scratchmark-1.8.0-x86_64.AppImage
+\`\`\`
+
+---
+
+**Alternative: Local Build (for development)**
+If you prefer to build locally without Docker, see [scripts/build-appimage-standard.sh](scripts/build-appimage-standard.sh) for standard Linux build instructions.
+
+**Note:** Both Docker and local builds produce identical AppImages with proper ELF interpreters for all Linux distributions.
