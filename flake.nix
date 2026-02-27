@@ -98,10 +98,10 @@
             gettext
             desktop-file-utils
             appstream-glib
-            squashfsTools
             patchelf
             file
             makeWrapper
+            wget
           ];
 
           buildInputs = with pkgs; [
@@ -158,13 +158,35 @@
             cp scripts/AppRun.in $out/AppDir/AppRun
             chmod +x $out/AppDir/AppRun
 
-          # Create AppImage
-          mksquashfs $out/AppDir $out/Scratchmark-$version-${system}.AppImage \
-            -root-owned -noappend -comp xz -b 1M -Xdict-size 100%
+            # Copy icon to root for AppImage
+            cp data/icons/hicolor/scalable/apps/org.scratchmark.Scratchmark.svg \
+              $out/AppDir/.DirIcon
+
+            # Copy desktop file to root for AppImage
+            cp data/org.scratchmark.Scratchmark.desktop $out/AppDir/org.scratchmark.Scratchmark.desktop
           '';
 
-          # Don't compress the AppImage again
-          dontFixup = true;
+          postFixup = ''
+            # Fix ELF interpreter for standard Linux distributions
+            # Nix builds use /nix/store/.../ld-linux-x86-64.so.2
+            # which doesn't exist on non-NixOS systems
+            patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 $out/AppDir/usr/bin/scratchmark
+
+            # Verify the fix
+            if ! patchelf -i $out/AppDir/usr/bin/scratchmark | grep -q "/lib64/ld-linux-x86-64.so.2"; then
+              echo "ERROR: Failed to set ELF interpreter"
+              exit 1
+            fi
+
+            # Download appimagetool to create proper AppImage
+            APPIMAGETOOL=$TMPDIR/appimagetool
+            wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O $APPIMAGETOOL
+            chmod +x $APPIMAGETOOL
+
+            # Create proper AppImage
+            cd $out
+            $APPIMAGETOOL AppDir Scratchmark-$version-x86_64.AppImage
+          '';
         };
 
       in {

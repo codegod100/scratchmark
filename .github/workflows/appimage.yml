@@ -25,9 +25,12 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
-      - name: Build AppImage
+      - name: Build AppImage (Manual Script)
         run: |
-          nix build .#appimage --print-build-logs
+          # Use manual build script to handle network and ELF interpreter
+          bash scripts/build-appimage-fixed.sh
+
+      - name: Get version
 
       - name: Get version
         id: version
@@ -46,9 +49,16 @@ jobs:
       - name: Find and rename AppImage
         run: |
           mkdir -p release
-          cp result/*.AppImage release/Scratchmark-${{ steps.version.outputs.version }}-x86_64.AppImage
+          # The build script creates AppImage in current directory
+          cp Scratchmark-*.AppImage release/Scratchmark-${{ steps.version.outputs.version }}-x86_64.AppImage || true
           chmod +x release/Scratchmark-${{ steps.version.outputs.version }}-x86_64.AppImage
           ls -lh release/
+
+      - name: Generate checksum
+        run: |
+          cd release
+          sha256sum *.AppImage > sha256sums.txt
+          cat sha256sums.txt
 
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
