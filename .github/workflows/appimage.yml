@@ -60,6 +60,10 @@ jobs:
           sha256sum *.AppImage > sha256sums.txt
           cat sha256sums.txt
 
+      - name: Clean up
+        run: |
+          rm -rf AppDir build squashfs-root
+
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
