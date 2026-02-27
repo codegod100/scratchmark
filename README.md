@@ -1,4 +1,5 @@
-[![CI Status Badge](https://github.com/sevonj/scratchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/sevonj/scratchmark/actions/workflows/ci.yml)
+[![CI Status Badge](https://github.com/sevonj/scratchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/sevonj/scratchmark/actions/workflows/ci.yml/badge.svg)
+[![Translation Status Badge](https://translate.codeberg.org/widget/scratchmark/app/svg-badge.svg)](https://translate.codeberg.org/widget/scratchmark/app/svg-badge.svg)
 
 <div align="center">
 
@@ -18,7 +19,7 @@ https://scratchmark.org
 
 ![screenshot](data/screenshots/screenshot_c_dark.png)
 
-![cat](https://github.com/user/attachments/assets/aaa7b4175e2f-4a87-add9b-aa29591d6bcd)
+![cat](https://github.com/user-attachments/assets/aaa7b417-5e2f-4a87-add9b-aa29591d6bcd)
 
 ## Get Scratchmark
 
@@ -67,49 +68,106 @@ The project uses a standard build system (Meson + Cargo).
 
 Ubuntu
 
-\`\`\`bash
+```
 libgtk-4-dev build-essential libglib2.0-dev libadwaita-1-dev libgtksourceview-5-dev
-\`\`\`
+```
 
+### Flatpak
 
-**Quick Start:**
-\`\`\`bash
-# 1. Build and get AppImage (all in one command)
-docker build -t scratchmark-build . && \
-docker run --rm -v \$(pwd):/output scratchmark-build && \
+Generating a Flatpak
+
+#### Dependencies
+
+You need Flatpak with Flathub and following packages:
+
+```
+org.gnome.Sdk//49
+```
+
+#### Building
+
+Build & install:
+
+```sh
+cd build-aux
+sh generate_flatpak.sh && flatpak install Scratchmark.flatpak --user -y
+```
+
+### AppImage
+
+Build Scratchmark AppImage using Docker:
+
+```bash
+# Build Docker image
+docker build -t scratchmark-build .
+
+# Build AppImage in Docker
+docker run --rm -v $(pwd):/output scratchmark-build
+
+# Get AppImage from Docker output
 docker cp scratchmark-build:/output/Scratchmark-*.AppImage .
 
-# 2. Test it
-chmod +x Scratchmark-*.AppImage
-./Scratchmark-*.AppImage
-\`\`\`
+# Or use Docker Compose
+# See DOCKER_BUILD.md for detailed instructions
+```
+
+**Dependencies:**
+- docker
+
+**System Requirements (same for all Linux):**
+- gtk4
+- libadwaita-1
+- gtksourceview-5
+
+**Note:** The AppImage does not bundle GTK4 or libadwaita. Users need these libraries installed on their system.
+
+On Ubuntu/Debian:
+```bash
+sudo apt install libgtk-4-1 libadwaita-1-0 libgtksourceview-5-0
+```
+
+On Fedora:
+```bash
+sudo dnf install gtk4 libadwaita gtksourceview5
+```
+
+On Arch Linux:
+```bash
+sudo pacman -S gtk4 libadwaita gtksourceview5
+```
+
+**Documentation:** See [DOCKER_BUILD.md](DOCKER_BUILD.md) for detailed Docker build instructions, including:
+- Complete build process
+- Environment setup
+- Troubleshooting common issues
+- How to extract and test AppImage
+
+**Advantages of Docker Build:**
+- **No special setup required** - Works with any Linux distribution
+- **Full network access** - No sandbox restrictions during build
+- **Standard ELF paths** - Binary uses `/lib64/ld-linux-x86-64.so.2` interpreter
+- **Reproducible** - Same Docker image produces identical AppImages
+- **Cross-platform** - Can build on any system with Docker installed
+
+**Quick Start:**
+```bash
+# 1. Build and get AppImage (all in one command)
+docker build -t scratchmark-build . &&
+docker run --rm -v $(pwd):/output scratchmark-build &&
+docker cp scratchmark-build:/output/Scratchmark-*.AppImage .
+```
 
 **AppImage Structure:**
 The Docker-built AppImage contains:
-- \`\`\`scratchmark\`\` binary
+- `scratchmark` binary
 - GTK4 resources (icons, UI templates)
 - GSettings schema
 - Desktop entry
-- \`\`\`.desktop\`\` and \`\`DirIcon\`\` for AppImage
-- \`\`\`AppRun\`\` wrapper script
+- `.desktop` and `DirIcon` for AppImage
+- `AppRun` wrapper script
 
 **SHA256 Checksum:**
-See [DOCKER_BUILD.md](DOCKER_BUILD.md) for the checksum of your specific build.
-
----
-
-**Release Process:**
-AppImages are automatically built and released to GitHub when you push a version tag:
-
-\`\`\`bash
-git tag v1.8.0
-git push origin v1.8.0
-\`\`\`
-
-The AppImage will be available at:
-\`\`\`
-https://github.com/sevonj/scratchmark/releases/download/v1.8.0/Scratchmark-1.8.0-x86_64.AppImage
-\`\`\`
+See [DOCKER_BUILD.md](DOCKER_BUILD.md) for checksum of your specific build.
 
 ---
 
@@ -117,3 +175,18 @@ https://github.com/sevonj/scratchmark/releases/download/v1.8.0/Scratchmark-1.8.0
 If you prefer to build locally without Docker, see [scripts/build-appimage-standard.sh](scripts/build-appimage-standard.sh) for standard Linux build instructions.
 
 **Note:** Both Docker and local builds produce identical AppImages with proper ELF interpreters for all Linux distributions.
+
+---
+
+**Release Process:**
+AppImages are automatically built and released to GitHub when you push a version tag:
+
+```bash
+git tag v1.8.0
+git push origin v1.8.0
+```
+
+The AppImage will be available at:
+```bash
+https://github.com/sevonj/scratchmark/releases/download/v1.8.0/Scratchmark-1.8.0-x86_64.AppImage
+```
