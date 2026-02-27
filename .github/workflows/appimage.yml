@@ -30,7 +30,7 @@ jobs:
           # Use manual build script to handle network and ELF interpreter
           bash scripts/build-appimage-fixed.sh
 
-      - name: Get version
+      - name: Find and rename AppImage
 
       - name: Get version
         id: version
