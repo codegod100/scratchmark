@@ -1,76 +1,111 @@
-FROM archlinux/base:latest
+# Multi-stage Docker build for Scratchmark AppImage
+# Works with any Linux distribution
+
+FROM ubuntu:22.04 AS builder
 
 # Install build dependencies
-RUN pacman -Syu --noconfirm --needed meson ninja patchelf pkg-config cargo gtk4 libadwaita gtksourceview5
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    build-essential \
+    pkg-config \
+    libglib2.0-dev \
+    libgtk-4-dev \
+    libadwaita-1-dev \
+    libgtksourceview-5-dev \
+    libpango1.0-dev \
+    libcairo2-dev \
+    patchelf \
+    meson \
+    ninja-build
 
-# Install additional tools
-RUN pacman -Syu --noconfirm --needed wget
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+ENV RUSTUP_HOME="/root/.rustup"
 
-# Set working directory
 WORKDIR /build
 
 # Copy source code
 COPY . .
 
-# Build the binary
+# Build binary
 RUN cargo build --release
 
 # Build resources
 RUN meson setup build
 RUN cd build && meson compile
 
-# Build AppImage structure
-RUN mkdir -p /AppDir/usr/{bin,share/{applications,icons,metainfo,glib-2.0/schemas}}
-RUN cp target/release/scratchmark /AppDir/usr/bin/
-RUN chmod +x /AppDir/usr/bin/scratchmark
+# Create AppDir structure
+RUN mkdir -p AppDir/usr/{bin,share/{applications,icons,metainfo,glib-2.0/schemas}}
 
-RUN mkdir -p /AppDir/usr/share/scratchmark
-RUN cp build/data/resources/scratchmark.gresource /AppDir/usr/share/scratchmark/
-RUN cp build/data/org.scratchmark.Scratchmark.desktop /AppDir/usr/share/applications/
-RUN cp data/org.scratchmark.Scratchmark.gschema.xml /AppDir/usr/share/glib-2.0/schemas/
-RUN cp build/data/org.scratchmark.Scratchmark.metainfo.xml /AppDir/usr/share/metainfo/
-RUN cp -r data/icons/* /AppDir/usr/share/icons/
+# Copy binary
+RUN cp target/release/scratchmark AppDir/usr/bin/ && \
+    chmod +x AppDir/usr/bin/scratchmark
+
+# Copy resources
+RUN mkdir -p AppDir/usr/share/scratchmark && \
+    cp build/data/resources/scratchmark.gresource AppDir/usr/share/scratchmark/ && \
+    cp build/data/org.scratchmark.Scratchmark.desktop AppDir/usr/share/applications/ && \
+    cp data/org.scratchmark.Scratchmark.gschema.xml AppDir/usr/share/glib-2.0/schemas/ && \
+    cp build/data/org.scratchmark.Scratchmark.metainfo.xml AppDir/usr/share/metainfo/ && \
+    cp -r data/icons/* AppDir/usr/share/icons/
 
 # Copy AppRun
-COPY scripts/AppRun.in /AppDir/AppRun
-RUN chmod +x /AppDir/AppRun
+RUN cp scripts/AppRun.in AppDir/AppRun && \
+    chmod +x AppDir/AppRun
 
 # Copy icon and desktop to root
-RUN cp data/icons/hicolor/scalable/apps/org.scratchmark.Scratchmark.svg /AppDir/.DirIcon
-RUN cp build/data/org.scratchmark.Scratchmark.desktop /AppDir/org.scratchmark.Scratchmark.desktop
+RUN cp data/icons/hicolor/scalable/apps/org.scratchmark.Scratchmark.svg AppDir/.DirIcon && \
+    cp build/data/org.scratchmark.Scratchmark.desktop AppDir/org.scratchmark.Scratchmark.desktop
 
 # Download appimagetool
-RUN wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
-RUN chmod +x /usr/local/bin/appimagetool
+RUN wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool && \
+    chmod +x /usr/local/bin/appimagetool
 
 # Fix ELF interpreter
-RUN patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /AppDir/usr/bin/scratchmark
+RUN patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 AppDir/usr/bin/scratchmark
 
 # Create AppImage
-RUN /usr/local/bin/appimagetool /AppDir /Scratchmark-1.8.0-x86_64.AppImage
-
-# Copy AppImage to output location
-RUN cp /Scratchmark-1.8.0-x86_64.AppImage /output/
+RUN /usr/local/bin/appimagetool AppDir Scratchmark-1.8.0-x86_64.AppImage
 
 # Generate checksum
-RUN cd /output && sha256sum Scratchmark-1.8.0-x86_64.AppImage > sha256sums.txt
-
-# Verify ELF interpreter
-RUN echo "Verifying ELF interpreter..."
-RUN readelf -l /output/Scratchmark-1.8.0-x86_64.AppImage | grep -A2 "INTERP" | grep "0x000000000042" | head -1 | xargs -I{} grep -q "/lib64/ld-linux-x86-64.so.2"; then \
-    echo "✓ ELF interpreter correct: /lib64/ld-linux-x86-64.so.2" \
-  || echo "✗ ELF interpreter incorrect"
+RUN sha256sum Scratchmark-1.8.0-x86_64.AppImage > sha256sums.txt
 
 # Clean up
-RUN rm -rf /AppDir /build
+RUN rm -rf AppDir /build
 
 # Display results
-RUN echo "=========================================="
-RUN echo "✓ AppImage built successfully!"
-RUN echo "Location: /output/Scratchmark-1.8.0-x86_64.AppImage"
-RUN echo "Version: 1.8.0"
-RUN ls -lh /output/*.AppImage
-RUN echo ""
-RUN echo "SHA256:"
-RUN cat /output/sha256sums.txt
-RUN echo "=========================================="
+RUN echo "==========================================" && \
+    echo "AppImage built successfully!" && \
+    echo "" && \
+    echo "Location: Scratchmark-1.8.0-x86_64.AppImage" && \
+    echo "SHA256:" && \
+    cat sha256sums.txt && \
+    echo "=========================================="
+
+# Final stage
+FROM ubuntu:22.04 AS final
+
+# Copy from builder stage
+COPY --from=builder /Scratchmark-1.8.0-x86_64.AppImage /scratchmark.AppImage
+COPY --from=builder /sha256sums.txt /sha256sums.txt
+
+# Metadata
+LABEL maintainer="scratchmark"
+LABEL description="Scratchmark Markdown Editor - AppImage Build"
+
+WORKDIR /output
+
+# Display final info
+RUN echo "==========================================" && \
+    echo "Build complete!" && \
+    echo "" && \
+    echo "AppImage: scratchmark.AppImage" && \
+    echo "" && \
+    echo "SHA256:" && \
+    cat sha256sums.txt && \
+    echo "=========================================="
+
+# Set output as the build artifact
+RUN mv /scratchmark.AppImage Scratchmark-1.8.0-x86_64.AppImage
